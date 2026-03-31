@@ -115,6 +115,42 @@ function cancelarSeleccionEnvido() {
     actualizarBotones();
 }
 
+function subidasEnvidoDisponibles(tipoActual) {
+    if (tipoActual === 'envido') {
+        return ['realenvido', 'faltaenvido'];
+    }
+    if (tipoActual === 'realenvido') {
+        return ['faltaenvido'];
+    }
+    return [];
+}
+
+function subirEnvidoDesdeRespuesta(tipo) {
+    if (!estadoEnvido.pendiente || !estadoEnvido.cantor) {
+        return false;
+    }
+
+    const tipoActual = estadoEnvido.tipoCantoPendiente || 'envido';
+    const posibles = subidasEnvidoDisponibles(tipoActual);
+    if (!posibles.includes(tipo)) {
+        return false;
+    }
+
+    const elementos = obtenerUI();
+    const nuevoCantor = ladoOpuesto(estadoEnvido.cantor);
+    const responde = ladoOpuesto(nuevoCantor);
+    const datos = datosCantoEnvido(tipo);
+
+    estadoEnvido.cantor = nuevoCantor;
+    estadoEnvido.tipoCantoPendiente = tipo;
+    estadoEnvido.fueCantado = true;
+
+    elementos.textoRespuestaEnvido.textContent = `${nombreLado(nuevoCantor)} canto ${datos.nombre}. ${nombreLado(responde)}: Queres?`;
+    elementos.panelRespuestaEnvido.classList.remove('panel-envido--hidden');
+    actualizarBotones();
+    return true;
+}
+
 function resolverEnvido(acepta) {
     return function () {
         if (!estadoEnvido.pendiente) {

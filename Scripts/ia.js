@@ -1,6 +1,5 @@
-// --- Módulo de Inteligencia Artificial ---
-// Estas funciones manejan toda la comunicación con el backend y las decisiones del rival IA.
-// Dependen de las variables y funciones definidas en script.js, envido.js y truco.js.
+// Estas funciones manejan toda la comunicación con el backend y las decisiones del rival IA
+// Dependen de las variables y funciones definidas en script.js, envido.js y truco.js
 
 let tiempoInicioTurnoIA = null;
 
@@ -96,6 +95,14 @@ async function ejecutarAccionIA() {
         const decision = await solicitarDecisionIA('responder-envido', {
             canto: estadoEnvido.tipoCantoPendiente || 'envido'
         });
+
+        if (decision.accion === 'subir-envido' && decision.canto_subida) {
+            const subio = subirEnvidoDesdeRespuesta(decision.canto_subida);
+            if (subio) {
+                return;
+            }
+        }
+
         resolverEnvido(decision.acepta === true)();
         return;
     }
@@ -122,8 +129,11 @@ async function ejecutarAccionIA() {
         const decision = await solicitarDecisionIA('decidir-canto');
 
         if (decision.accion === 'cantar-truco') {
+            const pendienteAntes = estadoTruco.pendiente;
             cantarTruco('rival');
-            return;
+            if (!pendienteAntes && estadoTruco.pendiente) {
+                return;
+            }
         }
 
         const tipoEnvido = {
