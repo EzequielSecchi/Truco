@@ -16,13 +16,84 @@
 
         <div class="fondo" id="fondo">
 
-            <img src="Fondo/Mesa.png" alt="Fondo de Mesa de Truco" class="fondo-mesa"> 
-            <div class="contenedorCartas" id="contenedorCartas">
+            <div class="marcador" id="marcador">Jugador 0 - Rival 0 (a 15)</div>
+            <div class="turno-indicador" id="turnoIndicador">Turno: Jugador</div>
 
+            <div class="acciones acciones--rival">
+                <button type="button" id="btnEnvidoRival" class="btn-envido">Envido</button>
+                <button type="button" id="btnTrucoRival" class="btn-envido">Truco</button>
+                <button type="button" id="btnMazoRival" class="btn-envido">Mazo</button>
+            </div>
+
+            <div class="acciones acciones--jugador">
+                <button type="button" id="btnEnvidoJugador" class="btn-envido">Envido</button>
+                <button type="button" id="btnTrucoJugador" class="btn-envido">Truco</button>
+                <button type="button" id="btnMazoJugador" class="btn-envido">Mazo</button>
+            </div>
+
+            <div class="panel-envido panel-envido--hidden" id="panelCantosEnvido">
+                <p id="textoCantosEnvido">Elegi el canto</p>
+                <div class="panel-envido__acciones">
+                    <button type="button" id="btnCantarEnvido" class="btn-panel">Envido</button>
+                    <button type="button" id="btnCantarRealEnvido" class="btn-panel">Real Envido</button>
+                    <button type="button" id="btnCantarFaltaEnvido" class="btn-panel">Falta Envido</button>
+                    <button type="button" id="btnCancelarCantoEnvido" class="btn-panel">Cancelar</button>
+                </div>
+            </div>
+
+            <div class="casillas" id="casillas">
+                <div class="casilla" data-index="0"></div>
+                <div class="casilla" data-index="1"></div>
+                <div class="casilla" data-index="2"></div>
+            </div>
+            <div class="contenedorCartas" id="contenedorCartasRival"></div>
+            <div class="contenedorCartas" id="contenedorCartasJugador">
+
+            </div>
+
+            <div class="panel-envido panel-envido--hidden" id="panelRespuestaEnvido">
+                <p id="textoRespuestaEnvido">Envido</p>
+                <div class="panel-envido__acciones">
+                    <button type="button" id="btnQuieroEnvido" class="btn-panel">Quiero</button>
+                    <button type="button" id="btnNoQuieroEnvido" class="btn-panel">No quiero</button>
+                </div>
+            </div>
+
+            <div class="panel-envido panel-envido--hidden" id="panelResultadoEnvido">
+                <p id="textoResultadoEnvido">Resultado del envido</p>
+                <div class="panel-envido__acciones">
+                    <button type="button" id="btnContinuarEnvido" class="btn-panel">Continuar</button>
+                </div>
+            </div>
+
+            <div class="panel-envido panel-envido--hidden" id="panelRespuestaTruco">
+                <p id="textoRespuestaTruco">Truco</p>
+                <div class="panel-envido__acciones">
+                    <button type="button" id="btnQuieroTruco" class="btn-panel">Quiero</button>
+                    <button type="button" id="btnNoQuieroTruco" class="btn-panel">No quiero</button>
+                    <button type="button" id="btnSubirTruco" class="btn-panel">Retruco</button>
+                </div>
+            </div>
+
+            <div class="panel-envido panel-envido--hidden" id="panelInicioPartida">
+                <p>Elegi la partida</p>
+                <div class="panel-envido__acciones">
+                    <button type="button" id="btnPartida15" class="btn-panel">A 15</button>
+                    <button type="button" id="btnPartida30" class="btn-panel">A 30</button>
+                </div>
+            </div>
+
+            <div class="panel-envido panel-envido--hidden" id="panelFinPartida">
+                <p id="textoFinPartida">Ganador</p>
+                <div class="panel-envido__acciones">
+                    <button type="button" id="btnReiniciarPartida" class="btn-panel">Nueva partida</button>
+                </div>
             </div>
 
         </div>
 
+        <script src="Scripts/envido.js"></script>
+        <script src="Scripts/truco.js"></script>
         <script src="Scripts/script.js"></script>
 
     </body>
