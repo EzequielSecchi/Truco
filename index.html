@@ -76,10 +76,27 @@
             </div>
 
             <div class="panel-envido panel-envido--hidden" id="panelInicioPartida">
-                <p>Elegi la partida</p>
-                <div class="panel-envido__acciones">
+                <p id="textoInicioPartida">Elegi el modo de juego</p>
+                <div class="panel-inicio__grupo" id="grupoModoJuego">
+                    <div class="panel-envido__acciones">
+                        <button type="button" id="btnModoHumano" class="btn-panel">Dos jugadores</button>
+                        <button type="button" id="btnModoIa" class="btn-panel">Jugar contra IA</button>
+                    </div>
+                </div>
+                <div class="panel-inicio__grupo panel-inicio__grupo--hidden" id="grupoDificultadIa">
+                    <p class="panel-inicio__descripcion" id="textoDificultadIa">Dificultad de la IA</p>
+                    <div class="panel-envido__acciones">
+                        <button type="button" id="btnDificultadFacil" class="btn-panel">Facil</button>
+                        <button type="button" id="btnDificultadNormal" class="btn-panel">Normal</button>
+                        <button type="button" id="btnDificultadDificil" class="btn-panel">Dificil</button>
+                    </div>
+                </div>
+                <div class="panel-inicio__grupo panel-inicio__grupo--hidden" id="grupoPuntajeObjetivo">
+                    <p class="panel-inicio__descripcion" id="textoModoSeleccionado">Modo: Dos jugadores</p>
+                    <div class="panel-envido__acciones">
                     <button type="button" id="btnPartida15" class="btn-panel">A 15</button>
                     <button type="button" id="btnPartida30" class="btn-panel">A 30</button>
+                    </div>
                 </div>
             </div>
 
@@ -90,11 +107,19 @@
                 </div>
             </div>
 
+            <div class="panel-envido panel-envido--hidden" id="panelFinMano">
+                <p id="textoFinMano">Mano terminada</p>
+                <div class="panel-envido__acciones">
+                    <button type="button" id="btnRepartir" class="btn-panel">Repartir</button>
+                </div>
+            </div>
+
         </div>
 
         <script src="Scripts/envido.js"></script>
         <script src="Scripts/truco.js"></script>
         <script src="Scripts/script.js"></script>
+        <script src="Scripts/ia.js"></script>
 
     </body>
 

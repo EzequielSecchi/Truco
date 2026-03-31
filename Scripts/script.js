@@ -8,6 +8,8 @@ const ALTO_CARTA = 200;
 const ESCALA_CARTA = 0.66;
 const GAP_CARTAS = -40;
 const DORSO_CARTA = 'Cartas/__50.gif';
+const DESPLAZAMIENTO_CARTA_GANADORA_X = 16;
+const DESPLAZAMIENTO_CARTA_GANADORA_Y = 14;
 const DESPLAZAMIENTO_MANO_JUGADOR = 200;
 const DESPLAZAMIENTO_MANO_RIVAL = -220;
 const CARTAS_ORO = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
@@ -57,6 +59,14 @@ let partidaIniciada = false;
 let puntosObjetivo = 15;
 let mano = 'jugador';
 let ganadorPartida = null;
+let modoJuego = null;
+let dificultadIA = null;
+let iaEnCurso = false;
+let temporizadorIA = null;
+let iaDisponible = true;
+let esperandoReparto = false;
+
+const URL_BACKEND_IA = 'http://127.0.0.1:8000';
 
 const puntos = {
     jugador: 0,
@@ -139,8 +149,22 @@ function obtenerUI() {
         btnNoQuieroTruco: document.getElementById('btnNoQuieroTruco'),
         btnSubirTruco: document.getElementById('btnSubirTruco'),
         panelInicioPartida: document.getElementById('panelInicioPartida'),
+        textoInicioPartida: document.getElementById('textoInicioPartida'),
+        grupoModoJuego: document.getElementById('grupoModoJuego'),
+        grupoDificultadIa: document.getElementById('grupoDificultadIa'),
+        grupoPuntajeObjetivo: document.getElementById('grupoPuntajeObjetivo'),
+        textoDificultadIa: document.getElementById('textoDificultadIa'),
+        textoModoSeleccionado: document.getElementById('textoModoSeleccionado'),
+        btnModoHumano: document.getElementById('btnModoHumano'),
+        btnModoIa: document.getElementById('btnModoIa'),
+        btnDificultadFacil: document.getElementById('btnDificultadFacil'),
+        btnDificultadNormal: document.getElementById('btnDificultadNormal'),
+        btnDificultadDificil: document.getElementById('btnDificultadDificil'),
         btnPartida15: document.getElementById('btnPartida15'),
         btnPartida30: document.getElementById('btnPartida30'),
+        panelFinMano: document.getElementById('panelFinMano'),
+        textoFinMano: document.getElementById('textoFinMano'),
+        btnRepartir: document.getElementById('btnRepartir'),
         panelFinPartida: document.getElementById('panelFinPartida'),
         textoFinPartida: document.getElementById('textoFinPartida'),
         btnReiniciarPartida: document.getElementById('btnReiniciarPartida')
@@ -155,6 +179,68 @@ function nombreLado(lado) {
 
 function ladoOpuesto(lado) {
     return lado === 'jugador' ? 'rival' : 'jugador';
+}
+
+function nombreDificultadIA(dificultad) {
+    if (dificultad === 'facil') {
+        return 'Facil';
+    }
+    if (dificultad === 'dificil') {
+        return 'Dificil';
+    }
+    return 'Normal';
+}
+
+function resetearPanelInicio() {
+    const elementos = obtenerUI();
+    elementos.textoInicioPartida.textContent = 'Elegi el modo de juego';
+    elementos.grupoModoJuego.classList.remove('panel-inicio__grupo--hidden');
+    elementos.grupoDificultadIa.classList.add('panel-inicio__grupo--hidden');
+    elementos.grupoPuntajeObjetivo.classList.add('panel-inicio__grupo--hidden');
+    elementos.textoModoSeleccionado.textContent = 'Modo: Dos jugadores';
+    elementos.textoDificultadIa.textContent = 'Dificultad de la IA';
+}
+
+function seleccionarModoJuego(modo) {
+    const elementos = obtenerUI();
+    modoJuego = modo;
+    dificultadIA = modo === 'ia' ? null : 'normal';
+    iaDisponible = true;
+    elementos.grupoModoJuego.classList.add('panel-inicio__grupo--hidden');
+
+    if (modo === 'ia') {
+        elementos.textoInicioPartida.textContent = 'Elegi la dificultad';
+        elementos.grupoDificultadIa.classList.remove('panel-inicio__grupo--hidden');
+        elementos.grupoPuntajeObjetivo.classList.add('panel-inicio__grupo--hidden');
+        elementos.textoModoSeleccionado.textContent = 'Modo: Jugador contra IA';
+        return;
+    }
+
+    elementos.textoInicioPartida.textContent = 'Elegi la partida';
+    elementos.grupoDificultadIa.classList.add('panel-inicio__grupo--hidden');
+    elementos.grupoPuntajeObjetivo.classList.remove('panel-inicio__grupo--hidden');
+    elementos.textoModoSeleccionado.textContent = 'Modo: Dos jugadores';
+}
+
+function seleccionarDificultadIA(dificultad) {
+    if (modoJuego !== 'ia') {
+        return;
+    }
+
+    const elementos = obtenerUI();
+    dificultadIA = dificultad;
+    elementos.textoInicioPartida.textContent = 'Elegi la partida';
+    elementos.grupoDificultadIa.classList.add('panel-inicio__grupo--hidden');
+    elementos.grupoPuntajeObjetivo.classList.remove('panel-inicio__grupo--hidden');
+    elementos.textoModoSeleccionado.textContent = `Modo: Jugador contra IA | Dificultad: ${nombreDificultadIA(dificultad)}`;
+}
+
+function obtenerCartasDisponibles(lado) {
+    return Array.from(document.querySelectorAll(`.carta[data-side="${lado}"][data-colocada="false"]`)).map((carta) => Number(carta.dataset.cardCode));
+}
+
+function obtenerIndiceBazaActual() {
+    return Math.min(progresoLado.jugador, progresoLado.rival);
 }
 
 function actualizarMarcador() {
@@ -193,6 +279,18 @@ function actualizarIndicadorTurno() {
         elementos.turnoIndicador.textContent = 'Turno: Continuar Truco';
         return;
     }
+    if (esperandoReparto) {
+        elementos.turnoIndicador.textContent = 'Turno: Repartir';
+        return;
+    }
+    if (esModoIA() && !iaDisponible) {
+        elementos.turnoIndicador.textContent = 'Turno: IA no disponible';
+        return;
+    }
+    if (iaEnCurso) {
+        elementos.turnoIndicador.textContent = 'Turno: IA pensando';
+        return;
+    }
     if (turnoActual === null) {
         elementos.turnoIndicador.textContent = 'Turno: Mano terminada';
         return;
@@ -203,7 +301,7 @@ function actualizarIndicadorTurno() {
 
 function actualizarBotones() {
     const elementos = obtenerUI();
-    const bloqueadoGeneral = !partidaIniciada || !!ganadorPartida || estadoEnvido.seleccionando || estadoEnvido.pendiente || estadoEnvido.esperandoContinuar || estadoTruco.pendiente || estadoTruco.esperandoContinuar;
+    const bloqueadoGeneral = !partidaIniciada || !!ganadorPartida || esperandoReparto || estadoEnvido.seleccionando || estadoEnvido.pendiente || estadoEnvido.esperandoContinuar || estadoTruco.pendiente || estadoTruco.esperandoContinuar;
 
     // Si ambos jugaron en la primera mano, no se puede cantar envido
     if (bazas[0].jugador !== null && bazas[0].rival !== null) {
@@ -211,16 +309,24 @@ function actualizarBotones() {
     }
 
     const puedeCantarEnvido = !bloqueadoGeneral && estadoEnvido.habilitado;
-        const puedeCantarTrucoJugador = !bloqueadoGeneral && obtenerSiguienteNivelTruco('jugador') !== null;
-        const puedeCantarTrucoRival = !bloqueadoGeneral && obtenerSiguienteNivelTruco('rival') !== null;
+    const puedeCantarTrucoJugador = !bloqueadoGeneral && obtenerSiguienteNivelTruco('jugador') !== null;
+    const puedeCantarTrucoRival = !bloqueadoGeneral && obtenerSiguienteNivelTruco('rival') !== null;
     const puedeIrAlMazo = !bloqueadoGeneral && turnoActual !== null;
+    const respuestaEnvidoAutomatica = esModoIA() && estadoEnvido.pendiente && estadoEnvido.cantor === 'jugador';
+    const respuestaTrucoAutomatica = esModoIA() && estadoTruco.pendiente && estadoTruco.cantor === 'jugador';
 
     elementos.btnEnvidoJugador.disabled = !puedeCantarEnvido || turnoActual !== 'jugador';
-    elementos.btnEnvidoRival.disabled = !puedeCantarEnvido || turnoActual !== 'rival';
-        elementos.btnTrucoJugador.disabled = !puedeCantarTrucoJugador || turnoActual !== 'jugador';
-        elementos.btnTrucoRival.disabled = !puedeCantarTrucoRival || turnoActual !== 'rival';
+    elementos.btnEnvidoRival.disabled = esModoIA() || !puedeCantarEnvido || turnoActual !== 'rival';
+    elementos.btnTrucoJugador.disabled = !puedeCantarTrucoJugador || turnoActual !== 'jugador';
+    elementos.btnTrucoRival.disabled = esModoIA() || !puedeCantarTrucoRival || turnoActual !== 'rival';
     elementos.btnMazoJugador.disabled = !puedeIrAlMazo || turnoActual !== 'jugador';
-    elementos.btnMazoRival.disabled = !puedeIrAlMazo || turnoActual !== 'rival';
+    elementos.btnMazoRival.disabled = esModoIA() || !puedeIrAlMazo || turnoActual !== 'rival';
+
+    elementos.btnQuieroEnvido.disabled = respuestaEnvidoAutomatica;
+    elementos.btnNoQuieroEnvido.disabled = respuestaEnvidoAutomatica;
+    elementos.btnQuieroTruco.disabled = respuestaTrucoAutomatica;
+    elementos.btnNoQuieroTruco.disabled = respuestaTrucoAutomatica;
+    elementos.btnSubirTruco.disabled = respuestaTrucoAutomatica;
 
     const textoTrucoJugador = obtenerTextoSiguienteTruco('jugador');
     const textoTrucoRival = obtenerTextoSiguienteTruco('rival');
@@ -228,6 +334,7 @@ function actualizarBotones() {
     elementos.btnTrucoRival.textContent = textoTrucoRival || 'Truco';
 
     actualizarIndicadorTurno();
+    programarTurnoIA();
 }
 
 
@@ -238,6 +345,7 @@ function sumarPuntos(lado, cantidad) {
     if (puntos[lado] >= puntosObjetivo) {
         ganadorPartida = lado;
         const elementos = obtenerUI();
+        elementos.panelFinMano.classList.add('panel-envido--hidden');
         elementos.textoFinPartida.textContent = `Gano ${nombreLado(lado)} ${puntos[lado]} a ${puntos[ladoOpuesto(lado)]}`;
         elementos.panelFinPartida.classList.remove('panel-envido--hidden');
         turnoActual = null;
@@ -315,6 +423,7 @@ function resetearEstadoDeMano() {
     estadoTruco.puedeEscalarAhora = null;
 
     contadorCapas = 10;
+    esperandoReparto = false;
     turnoActual = mano;
 
     const elementos = obtenerUI();
@@ -322,6 +431,7 @@ function resetearEstadoDeMano() {
     elementos.panelRespuestaEnvido.classList.add('panel-envido--hidden');
     elementos.panelResultadoEnvido.classList.add('panel-envido--hidden');
     elementos.panelRespuestaTruco.classList.add('panel-envido--hidden');
+    elementos.panelFinMano.classList.add('panel-envido--hidden');
 
     actualizarBotones();
 }
@@ -350,7 +460,7 @@ function crearMano(cartas, contenedor, side, desplazamientoY) {
         const img = document.createElement('img');
         const numeroFormato = String(numero).padStart(2, '0');
 
-        img.src = `Cartas/__${numeroFormato}.gif`;
+        img.src = (esModoIA() && side === 'rival') ? DORSO_CARTA : `Cartas/__${numeroFormato}.gif`;
         img.alt = `Carta ${numero}`;
         img.className = 'carta';
         img.dataset.side = side;
@@ -395,8 +505,14 @@ function iniciarNuevaMano() {
 
 function aplicarCapasSegunPrioridad(cartaRecienJugada, indiceCasilla) {
     const cartasEnCasilla = Array.from(document.querySelectorAll(`.carta[data-casilla-index="${indiceCasilla}"]`));
+    const casilla = document.querySelector(`.casilla[data-index="${indiceCasilla}"]`);
+    const rect = casilla ? casilla.getBoundingClientRect() : null;
 
     if (cartasEnCasilla.length === 1) {
+        if (rect) {
+            cartaRecienJugada.style.left = rect.left + 'px';
+            cartaRecienJugada.style.top = rect.top + 'px';
+        }
         cartaRecienJugada.style.zIndex = String(contadorCapas);
         contadorCapas += 1;
         return;
@@ -412,11 +528,46 @@ function aplicarCapasSegunPrioridad(cartaRecienJugada, indiceCasilla) {
         if (prioridadNueva >= prioridadOtra) {
             otraCarta.style.zIndex = String(base);
             cartaRecienJugada.style.zIndex = String(base + 1);
+
+            if (rect) {
+                otraCarta.style.left = rect.left + 'px';
+                otraCarta.style.top = rect.top + 'px';
+                cartaRecienJugada.style.left = (rect.left + DESPLAZAMIENTO_CARTA_GANADORA_X) + 'px';
+                cartaRecienJugada.style.top = (rect.top + DESPLAZAMIENTO_CARTA_GANADORA_Y) + 'px';
+            }
         } else {
             cartaRecienJugada.style.zIndex = String(base);
             otraCarta.style.zIndex = String(base + 1);
+
+            if (rect) {
+                cartaRecienJugada.style.left = rect.left + 'px';
+                cartaRecienJugada.style.top = rect.top + 'px';
+                otraCarta.style.left = (rect.left + DESPLAZAMIENTO_CARTA_GANADORA_X) + 'px';
+                otraCarta.style.top = (rect.top + DESPLAZAMIENTO_CARTA_GANADORA_Y) + 'px';
+            }
         }
     }
+}
+
+function voltearCartaRival(carta, codigoCarta) {
+    // Esperar a que termine la animacion de posicion (volviendo, 400ms)
+    setTimeout(() => {
+        // Primera mitad: doblar hacia adentro
+        carta.style.transition = 'transform 0.18s ease-in';
+        carta.style.transform = `scale(${ESCALA_CARTA}) scaleX(0)`;
+
+        // A mitad de camino: cambiar la imagen y desdoblar
+        setTimeout(() => {
+            const numeroFormato = String(codigoCarta).padStart(2, '0');
+            carta.src = `Cartas/__${numeroFormato}.gif`;
+            carta.style.transition = 'transform 0.18s ease-out';
+            carta.style.transform = `scale(${ESCALA_CARTA})`;
+
+            setTimeout(() => {
+                carta.style.transition = '';
+            }, 180);
+        }, 180);
+    }, 420);
 }
 
 function encastrarCartaEnCasilla(carta, casilla) {
@@ -440,6 +591,11 @@ function encastrarCartaEnCasilla(carta, casilla) {
 
     carta.dataset.colocada = 'true';
     carta.style.cursor = 'default';
+
+
+    if (esModoIA() && lado === 'rival') {
+        voltearCartaRival(carta, codigoCarta);
+    }
 
     bazas[indiceCasilla][lado] = codigoCarta;
     evaluarBaza(indiceCasilla);
@@ -475,9 +631,13 @@ function cerrarManoConGanador(ganador, puntosGanados) {
     }
 
     mano = ladoOpuesto(mano);
-    setTimeout(() => {
-        iniciarNuevaMano();
-    }, 900);
+    esperandoReparto = true;
+
+    const elementos = obtenerUI();
+    const textoPuntos = puntosGanados === 1 ? '1 punto' : `${puntosGanados} puntos`;
+    elementos.textoFinMano.textContent = `Mano terminada. Gano ${nombreLado(ganador)} y sumo ${textoPuntos}.`;
+    elementos.panelFinMano.classList.remove('panel-envido--hidden');
+    actualizarBotones();
 }
 
 function irAlMazo(lado) {
@@ -518,6 +678,12 @@ function manejarMouseDown(e) {
     if (!partidaIniciada || ganadorPartida) {
         return;
     }
+    if (esperandoReparto) {
+        return;
+    }
+    if (iaEnCurso) {
+        return;
+    }
     if (estadoEnvido.seleccionando || estadoEnvido.pendiente || estadoEnvido.esperandoContinuar || estadoTruco.pendiente || estadoTruco.esperandoContinuar) {
         return;
     }
@@ -525,7 +691,8 @@ function manejarMouseDown(e) {
     if (
         e.target.classList.contains('carta') &&
         e.target.dataset.colocada !== 'true' &&
-        e.target.dataset.side === turnoActual
+        e.target.dataset.side === turnoActual &&
+        (!esModoIA() || e.target.dataset.side !== 'rival')
     ) {
         cartaEnArrastre = e.target;
         cartaEnArrastre.classList.add('dragging');
@@ -576,6 +743,10 @@ function manejarMouseUp() {
 }
 
 function elegirPuntajeObjetivo(valor) {
+    if (!modoJuego || (modoJuego === 'ia' && !dificultadIA)) {
+        return;
+    }
+
     puntosObjetivo = valor;
     puntos.jugador = 0;
     puntos.rival = 0;
@@ -586,8 +757,17 @@ function elegirPuntajeObjetivo(valor) {
     const elementos = obtenerUI();
     elementos.panelInicioPartida.classList.add('panel-envido--hidden');
     elementos.panelFinPartida.classList.add('panel-envido--hidden');
+    elementos.panelFinMano.classList.add('panel-envido--hidden');
 
     actualizarMarcador();
+    iniciarNuevaMano();
+}
+
+function repartirSiguienteMano() {
+    if (!partidaIniciada || ganadorPartida || !esperandoReparto) {
+        return;
+    }
+
     iniciarNuevaMano();
 }
 
@@ -596,6 +776,17 @@ function reiniciarPartida() {
     partidaIniciada = false;
     ganadorPartida = null;
     turnoActual = null;
+    modoJuego = null;
+    dificultadIA = null;
+    iaEnCurso = false;
+    iaDisponible = true;
+    tiempoInicioTurnoIA = null;
+    esperandoReparto = false;
+
+    if (temporizadorIA !== null) {
+        window.clearTimeout(temporizadorIA);
+        temporizadorIA = null;
+    }
 
     document.querySelectorAll('.carta').forEach((carta) => carta.remove());
     document.querySelectorAll('.casilla').forEach((casilla) => {
@@ -604,17 +795,25 @@ function reiniciarPartida() {
     });
 
     elementos.panelFinPartida.classList.add('panel-envido--hidden');
+    elementos.panelFinMano.classList.add('panel-envido--hidden');
     elementos.panelInicioPartida.classList.remove('panel-envido--hidden');
     elementos.panelCantosEnvido.classList.add('panel-envido--hidden');
     elementos.panelRespuestaEnvido.classList.add('panel-envido--hidden');
     elementos.panelResultadoEnvido.classList.add('panel-envido--hidden');
     elementos.panelRespuestaTruco.classList.add('panel-envido--hidden');
+    resetearPanelInicio();
     actualizarMarcador();
     actualizarBotones();
 }
 
 function inicializarEventos() {
     const elementos = obtenerUI();
+
+    elementos.btnModoHumano.addEventListener('click', () => seleccionarModoJuego('humano'));
+    elementos.btnModoIa.addEventListener('click', () => seleccionarModoJuego('ia'));
+    elementos.btnDificultadFacil.addEventListener('click', () => seleccionarDificultadIA('facil'));
+    elementos.btnDificultadNormal.addEventListener('click', () => seleccionarDificultadIA('normal'));
+    elementos.btnDificultadDificil.addEventListener('click', () => seleccionarDificultadIA('dificil'));
 
     elementos.btnEnvidoJugador.addEventListener('click', () => cantarEnvido('jugador'));
     elementos.btnEnvidoRival.addEventListener('click', () => cantarEnvido('rival'));
@@ -637,6 +836,7 @@ function inicializarEventos() {
 
     elementos.btnPartida15.addEventListener('click', () => elegirPuntajeObjetivo(15));
     elementos.btnPartida30.addEventListener('click', () => elegirPuntajeObjetivo(30));
+    elementos.btnRepartir.addEventListener('click', repartirSiguienteMano);
     elementos.btnReiniciarPartida.addEventListener('click', reiniciarPartida);
 
     document.addEventListener('mousedown', manejarMouseDown);
@@ -647,6 +847,7 @@ function inicializarEventos() {
 window.addEventListener('DOMContentLoaded', () => {
     obtenerUI();
     inicializarEventos();
+    resetearPanelInicio();
     actualizarMarcador();
     actualizarBotones();
     obtenerUI().panelInicioPartida.classList.remove('panel-envido--hidden');

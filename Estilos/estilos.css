@@ -197,6 +197,20 @@ table {
 	flex-wrap: wrap;
 }
 
+.panel-inicio__grupo {
+	margin-top: 12px;
+}
+
+.panel-inicio__grupo--hidden {
+	display: none;
+}
+
+.panel-inicio__descripcion {
+	font-size: 14px;
+	line-height: 1.4;
+	opacity: 0.88;
+}
+
 .contenedorCartas .carta {
 	pointer-events: auto;
 }
