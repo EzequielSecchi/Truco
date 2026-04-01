@@ -28,6 +28,7 @@ function obtenerEstadoParaIA() {
         baza_actual: bazas[indiceBazaActual],
         cartas_jugador: obtenerCartasDisponibles('jugador'),
         cartas_rival: obtenerCartasDisponibles('rival'),
+        cartas_rival_iniciales: [...manosPorLado.rival],
         estado_truco: {
             nivel_aceptado: estadoTruco.nivelAceptado,
             nivel_pendiente: estadoTruco.nivelPendiente,

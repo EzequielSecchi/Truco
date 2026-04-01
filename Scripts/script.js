@@ -65,6 +65,7 @@ let iaEnCurso = false;
 let temporizadorIA = null;
 let iaDisponible = true;
 let esperandoReparto = false;
+let musicaIniciada = false;
 
 const URL_BACKEND_IA = 'http://127.0.0.1:8000';
 
@@ -140,6 +141,8 @@ function obtenerUI() {
         textoRespuestaEnvido: document.getElementById('textoRespuestaEnvido'),
         btnQuieroEnvido: document.getElementById('btnQuieroEnvido'),
         btnNoQuieroEnvido: document.getElementById('btnNoQuieroEnvido'),
+        btnSubirRealEnvido: document.getElementById('btnSubirRealEnvido'),
+        btnSubirFaltaEnvido: document.getElementById('btnSubirFaltaEnvido'),
         panelResultadoEnvido: document.getElementById('panelResultadoEnvido'),
         textoResultadoEnvido: document.getElementById('textoResultadoEnvido'),
         btnContinuarEnvido: document.getElementById('btnContinuarEnvido'),
@@ -148,6 +151,9 @@ function obtenerUI() {
         btnQuieroTruco: document.getElementById('btnQuieroTruco'),
         btnNoQuieroTruco: document.getElementById('btnNoQuieroTruco'),
         btnSubirTruco: document.getElementById('btnSubirTruco'),
+        btnInterrumpirEnvido: document.getElementById('btnInterrumpirEnvido'),
+        btnInterrumpirRealEnvido: document.getElementById('btnInterrumpirRealEnvido'),
+        btnInterrumpirFaltaEnvido: document.getElementById('btnInterrumpirFaltaEnvido'),
         panelInicioPartida: document.getElementById('panelInicioPartida'),
         textoInicioPartida: document.getElementById('textoInicioPartida'),
         grupoModoJuego: document.getElementById('grupoModoJuego'),
@@ -165,6 +171,7 @@ function obtenerUI() {
         panelFinMano: document.getElementById('panelFinMano'),
         textoFinMano: document.getElementById('textoFinMano'),
         btnRepartir: document.getElementById('btnRepartir'),
+        musicaFondo: document.getElementById('musicaFondo'),
         panelFinPartida: document.getElementById('panelFinPartida'),
         textoFinPartida: document.getElementById('textoFinPartida'),
         btnReiniciarPartida: document.getElementById('btnReiniciarPartida')
@@ -303,7 +310,7 @@ function actualizarBotones() {
     const elementos = obtenerUI();
     const bloqueadoGeneral = !partidaIniciada || !!ganadorPartida || esperandoReparto || estadoEnvido.seleccionando || estadoEnvido.pendiente || estadoEnvido.esperandoContinuar || estadoTruco.pendiente || estadoTruco.esperandoContinuar;
 
-    // Si ambos jugaron en la primera mano, no se puede cantar envido
+    // Si ambos jugaron en la primera baza, ya no se puede cantar envido.
     if (bazas[0].jugador !== null && bazas[0].rival !== null) {
         estadoEnvido.habilitado = false;
     }
@@ -314,6 +321,25 @@ function actualizarBotones() {
     const puedeIrAlMazo = !bloqueadoGeneral && turnoActual !== null;
     const respuestaEnvidoAutomatica = esModoIA() && estadoEnvido.pendiente && estadoEnvido.cantor === 'jugador';
     const respuestaTrucoAutomatica = esModoIA() && estadoTruco.pendiente && estadoTruco.cantor === 'jugador';
+    const ladoRespondeEnvido = estadoEnvido.cantor ? ladoOpuesto(estadoEnvido.cantor) : null;
+    const ladoRespondeTruco = estadoTruco.cantor ? ladoOpuesto(estadoTruco.cantor) : null;
+    const tipoEnvidoPendiente = estadoEnvido.tipoCantoPendiente || 'envido';
+    const subidasEnvido = estadoEnvido.pendiente ? subidasEnvidoDisponibles(tipoEnvidoPendiente) : [];
+    const puedeSubirEnvido =
+        estadoEnvido.pendiente &&
+        !estadoEnvido.esperandoContinuar &&
+        subidasEnvido.length > 0 &&
+        !(esModoIA() && ladoRespondeEnvido === 'rival');
+    const puedeInterrumpirConEnvido =
+        estadoTruco.pendiente &&
+        !estadoTruco.esperandoContinuar &&
+        bazas[0].jugador === null &&
+        bazas[0].rival === null &&
+        estadoEnvido.habilitado &&
+        !estadoEnvido.fueCantado &&
+        !estadoEnvido.pendiente &&
+        !estadoEnvido.esperandoContinuar &&
+        !(esModoIA() && ladoRespondeTruco === 'rival');
 
     elementos.btnEnvidoJugador.disabled = !puedeCantarEnvido || turnoActual !== 'jugador';
     elementos.btnEnvidoRival.disabled = esModoIA() || !puedeCantarEnvido || turnoActual !== 'rival';
@@ -324,9 +350,19 @@ function actualizarBotones() {
 
     elementos.btnQuieroEnvido.disabled = respuestaEnvidoAutomatica;
     elementos.btnNoQuieroEnvido.disabled = respuestaEnvidoAutomatica;
+    elementos.btnSubirRealEnvido.disabled = !puedeSubirEnvido || !subidasEnvido.includes('realenvido');
+    elementos.btnSubirFaltaEnvido.disabled = !puedeSubirEnvido || !subidasEnvido.includes('faltaenvido');
+    elementos.btnSubirRealEnvido.hidden = !subidasEnvido.includes('realenvido');
+    elementos.btnSubirFaltaEnvido.hidden = !subidasEnvido.includes('faltaenvido');
     elementos.btnQuieroTruco.disabled = respuestaTrucoAutomatica;
     elementos.btnNoQuieroTruco.disabled = respuestaTrucoAutomatica;
     elementos.btnSubirTruco.disabled = respuestaTrucoAutomatica;
+    elementos.btnInterrumpirEnvido.disabled = !puedeInterrumpirConEnvido;
+    elementos.btnInterrumpirRealEnvido.disabled = !puedeInterrumpirConEnvido;
+    elementos.btnInterrumpirFaltaEnvido.disabled = !puedeInterrumpirConEnvido;
+    elementos.btnInterrumpirEnvido.hidden = !puedeInterrumpirConEnvido;
+    elementos.btnInterrumpirRealEnvido.hidden = !puedeInterrumpirConEnvido;
+    elementos.btnInterrumpirFaltaEnvido.hidden = !puedeInterrumpirConEnvido;
 
     const textoTrucoJugador = obtenerTextoSiguienteTruco('jugador');
     const textoTrucoRival = obtenerTextoSiguienteTruco('rival');
@@ -355,6 +391,30 @@ function sumarPuntos(lado, cantidad) {
     return false;
 }
 
+function iniciarMusicaFondo() {
+    if (musicaIniciada) {
+        return;
+    }
+
+    const audio = obtenerUI().musicaFondo;
+    if (!audio) {
+        return;
+    }
+
+    audio.volume = 0.35;
+    const intento = audio.play();
+    if (intento && typeof intento.then === 'function') {
+        intento.then(() => {
+            musicaIniciada = true;
+        }).catch(() => {
+            // Algunos navegadores bloquean autoplay hasta una interaccion.
+        });
+        return;
+    }
+
+    musicaIniciada = true;
+}
+
 function compararCartas(codigoJugador, codigoRival) {
     const prioridadJugador = PRIORIDAD_CARTAS.get(codigoJugador) || 0;
     const prioridadRival = PRIORIDAD_CARTAS.get(codigoRival) || 0;
@@ -365,7 +425,7 @@ function compararCartas(codigoJugador, codigoRival) {
     if (prioridadRival > prioridadJugador) {
         return 'rival';
     }
-    return mano;
+    return 'empate';
 }
 
 function evaluarBaza(indice) {
@@ -375,17 +435,58 @@ function evaluarBaza(indice) {
     }
 
     baza.ganador = compararCartas(baza.jugador, baza.rival);
-    bazasGanadas[baza.ganador] += 1;
+    if (baza.ganador === 'jugador' || baza.ganador === 'rival') {
+        bazasGanadas[baza.ganador] += 1;
+    }
 }
 
-function obtenerGanadorMano() {
-    if (bazasGanadas.jugador > bazasGanadas.rival) {
-        return 'jugador';
+function obtenerGanadorManoSegunReglas() {
+    const g0 = bazas[0].ganador;
+    const g1 = bazas[1].ganador;
+    const g2 = bazas[2].ganador;
+
+    if (!g0) {
+        return null;
     }
-    if (bazasGanadas.rival > bazasGanadas.jugador) {
-        return 'rival';
+
+    if (g0 === 'jugador' || g0 === 'rival') {
+        if (g1 === g0 || g1 === 'empate') {
+            return g0;
+        }
+
+        if (g1 === ladoOpuesto(g0)) {
+            if (!g2) {
+                return null;
+            }
+            if (g2 === 'empate') {
+                return g0;
+            }
+            return g2;
+        }
+
+        return null;
     }
-    return mano;
+
+    if (g0 === 'empate') {
+        if (!g1) {
+            return null;
+        }
+        if (g1 === 'jugador' || g1 === 'rival') {
+            return g1;
+        }
+
+        if (g1 === 'empate') {
+            if (!g2) {
+                return null;
+            }
+            if (g2 === 'jugador' || g2 === 'rival') {
+                return g2;
+            }
+            return mano;
+        }
+    }
+
+    return null;
 }
 
 function resetearEstadoDeMano() {
@@ -654,21 +755,15 @@ function irAlMazo(lado) {
 }
 
 function revisarFinDeMano() {
-    if (bazasGanadas.jugador >= 2 || bazasGanadas.rival >= 2) {
-        const ganador = bazasGanadas.jugador >= 2 ? 'jugador' : 'rival';
-        cerrarManoConGanador(ganador, valorManoTruco());
-        return;
-    }
-
-    if (progresoLado.jugador === 3 && progresoLado.rival === 3) {
-        const ganador = obtenerGanadorMano();
+    const ganador = obtenerGanadorManoSegunReglas();
+    if (ganador) {
         cerrarManoConGanador(ganador, valorManoTruco());
     }
 }
 
 function determinarProximoTurno(indiceBaza, ladoQueJugo) {
     const baza = bazas[indiceBaza];
-    if (baza && baza.ganador) {
+    if (baza && (baza.ganador === 'jugador' || baza.ganador === 'rival')) {
         return baza.ganador;
     }
     return ladoOpuesto(ladoQueJugo);
@@ -761,6 +856,7 @@ function elegirPuntajeObjetivo(valor) {
 
     actualizarMarcador();
     iniciarNuevaMano();
+    iniciarMusicaFondo();
 }
 
 function repartirSiguienteMano() {
@@ -823,6 +919,8 @@ function inicializarEventos() {
     elementos.btnCancelarCantoEnvido.addEventListener('click', cancelarSeleccionEnvido);
     elementos.btnQuieroEnvido.addEventListener('click', resolverEnvido(true));
     elementos.btnNoQuieroEnvido.addEventListener('click', resolverEnvido(false));
+    elementos.btnSubirRealEnvido.addEventListener('click', () => subirEnvidoDesdeRespuesta('realenvido'));
+    elementos.btnSubirFaltaEnvido.addEventListener('click', () => subirEnvidoDesdeRespuesta('faltaenvido'));
     elementos.btnContinuarEnvido.addEventListener('click', continuarEnvido);
 
     elementos.btnTrucoJugador.addEventListener('click', () => cantarTruco('jugador'));
@@ -830,6 +928,9 @@ function inicializarEventos() {
     elementos.btnQuieroTruco.addEventListener('click', resolverTruco(true));
     elementos.btnNoQuieroTruco.addEventListener('click', resolverTruco(false));
     elementos.btnSubirTruco.addEventListener('click', subirTrucoDesdeRespuesta);
+    elementos.btnInterrumpirEnvido.addEventListener('click', () => interrumpirTrucoConEnvido('envido'));
+    elementos.btnInterrumpirRealEnvido.addEventListener('click', () => interrumpirTrucoConEnvido('realenvido'));
+    elementos.btnInterrumpirFaltaEnvido.addEventListener('click', () => interrumpirTrucoConEnvido('faltaenvido'));
 
     elementos.btnMazoJugador.addEventListener('click', () => irAlMazo('jugador'));
     elementos.btnMazoRival.addEventListener('click', () => irAlMazo('rival'));
@@ -842,6 +943,7 @@ function inicializarEventos() {
     document.addEventListener('mousedown', manejarMouseDown);
     document.addEventListener('mousemove', manejarMouseMove);
     document.addEventListener('mouseup', manejarMouseUp);
+    document.addEventListener('click', iniciarMusicaFondo, { once: true });
 }
 
 window.addEventListener('DOMContentLoaded', () => {

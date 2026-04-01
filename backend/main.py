@@ -70,6 +70,7 @@ class DecisionRequest(BaseModel):
     baza_actual: dict[str, int | None | str] | None = None
     cartas_jugador: list[int]
     cartas_rival: list[int]
+    cartas_rival_iniciales: list[int] | None = None
     estado_truco: TrucoState
     estado_envido: EnvidoState
     nivel_pendiente: int | None = None
@@ -105,7 +106,8 @@ def decidir(req: DecisionRequest) -> DecisionResponse:
         return DecisionResponse(accion=accion, acepta=acepta, canto_subida=canto_subida)
 
     if req.fase == 'responder-truco':
-        accion, acepta = decidir_truco(req.cartas_rival, req.nivel_pendiente or 2, req.dificultad)
+        cartas_fuerza = req.cartas_rival_iniciales or req.cartas_rival
+        accion, acepta = decidir_truco(cartas_fuerza, req.nivel_pendiente or 2, req.dificultad)
         return DecisionResponse(accion=accion, acepta=acepta)
 
     if req.fase == 'decidir-canto':
@@ -127,11 +129,11 @@ def perfil_dificultad(dificultad: str) -> dict[str, float]:
             'bluff_subida_envido': 0.45,
             'bluff_subida_real_envido': 0.35,
             'bluff_subida_falta_envido': 0.1,
-            'bluff_subida_truco': 0.35,
+            'bluff_subida_truco': 0.2,
             'penalidad_fuerza': 2.8,
             'penalidad_envido': 5.0,
             'truco_subir': 13.0,
-            'truco_aceptar': 9.5,
+            'truco_aceptar': 8.4,
             'retruco_aceptar': 11.5,
             'vale_cuatro_aceptar': 13.5,
             'cantar_truco_umbral': 9.0,
@@ -180,11 +182,11 @@ def perfil_dificultad(dificultad: str) -> dict[str, float]:
         'bluff_subida_envido': 0.24,
         'bluff_subida_real_envido': 0.24,
         'bluff_subida_falta_envido': 0.16,
-        'bluff_subida_truco': 0.18,
+        'bluff_subida_truco': 0.1,
         'penalidad_fuerza': 1.3,
         'penalidad_envido': 2.2,
         'truco_subir': 11.0,
-        'truco_aceptar': 8.0,
+        'truco_aceptar': 7.2,
         'retruco_aceptar': 10.0,
         'vale_cuatro_aceptar': 12.5,
         'cantar_truco_umbral': 7.8,
@@ -226,8 +228,9 @@ def decidir_canto(req: DecisionRequest) -> str:
     if puede_cantar_truco and req.cartas_rival:
         siguiente_nivel = req.estado_truco.nivel_aceptado + 1
         if siguiente_nivel <= 4:
+            cartas_fuerza = req.cartas_rival_iniciales or req.cartas_rival
             prioridades = sorted(
-                (prioridad_carta(c) for c in req.cartas_rival), reverse=True
+                (prioridad_carta(c) for c in cartas_fuerza), reverse=True
             )
             fuerza = (sum(prioridades[:2]) / min(2, len(prioridades))) - perfil['penalidad_fuerza']
             umbral = {

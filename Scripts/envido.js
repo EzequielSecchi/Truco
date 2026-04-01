@@ -115,6 +115,50 @@ function cancelarSeleccionEnvido() {
     actualizarBotones();
 }
 
+function interrumpirTrucoConEnvido(tipo) {
+    if (!estadoTruco.pendiente || estadoTruco.esperandoContinuar) {
+        return false;
+    }
+    if (!estadoTruco.responder) {
+        return false;
+    }
+    if (!estadoEnvido.habilitado || estadoEnvido.fueCantado || estadoEnvido.pendiente || estadoEnvido.esperandoContinuar) {
+        return false;
+    }
+
+    const elementos = obtenerUI();
+    const cantor = estadoTruco.responder;
+    const responde = ladoOpuesto(cantor);
+    const datos = datosCantoEnvido(tipo);
+
+    estadoTruco.esperandoContinuar = true;
+    elementos.panelRespuestaTruco.classList.add('panel-envido--hidden');
+
+    estadoEnvido.seleccionando = false;
+    estadoEnvido.pendiente = true;
+    estadoEnvido.cantor = cantor;
+    estadoEnvido.tipoCantoPendiente = tipo;
+    estadoEnvido.fueCantado = true;
+
+    elementos.textoRespuestaEnvido.textContent = `${nombreLado(cantor)} canto ${datos.nombre}. ${nombreLado(responde)}: Queres?`;
+    elementos.panelRespuestaEnvido.classList.remove('panel-envido--hidden');
+    actualizarBotones();
+    return true;
+}
+
+function reanudarTrucoPendienteSiCorresponde() {
+    if (!estadoTruco.esperandoContinuar || !estadoTruco.pendiente || !estadoTruco.cantor) {
+        return;
+    }
+
+    const elementos = obtenerUI();
+    estadoTruco.esperandoContinuar = false;
+    elementos.textoRespuestaTruco.textContent = `${nombreLado(estadoTruco.cantor)} canto ${nombreNivelTruco(estadoTruco.nivelPendiente)}. ${nombreLado(ladoOpuesto(estadoTruco.cantor))}: Queres?`;
+    actualizarOpcionesRespuestaTruco();
+    elementos.panelRespuestaTruco.classList.remove('panel-envido--hidden');
+    actualizarBotones();
+}
+
 function subidasEnvidoDisponibles(tipoActual) {
     if (tipoActual === 'envido') {
         return ['realenvido', 'faltaenvido'];
@@ -170,6 +214,7 @@ function resolverEnvido(acepta) {
 
         if (!acepta) {
             sumarPuntos(cantor, datos.puntosNoQuiero);
+            reanudarTrucoPendienteSiCorresponde();
             actualizarBotones();
             return;
         }
@@ -207,5 +252,6 @@ function continuarEnvido() {
     const elementos = obtenerUI();
     elementos.panelResultadoEnvido.classList.add('panel-envido--hidden');
     estadoEnvido.esperandoContinuar = false;
+    reanudarTrucoPendienteSiCorresponde();
     actualizarBotones();
 }

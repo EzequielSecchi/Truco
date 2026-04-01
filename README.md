@@ -9,19 +9,40 @@ Juego de Truco en HTML, CSS y JavaScript.
 
 ## Levantar la IA
 
-1. Instalar dependencias:
+1. Ir a la carpeta del proyecto:
 
 ```bash
-pip install -r requirements.txt
+cd "/home/foxitrix/Escritorio/Pc formateada/facultad/Programacion/Truco"
 ```
 
-2. Iniciar el backend:
+2. Instalar dependencias (usando el entorno virtual del proyecto):
 
 ```bash
-uvicorn backend.main:app --reload
+./.venv/bin/python -m pip install -r requirements.txt
 ```
 
-3. Abrir el juego y elegir "Jugar contra IA".
+3. Iniciar el backend:
+
+```bash
+./.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+4. Comprobar que la IA esta activa:
+
+```bash
+curl -s http://127.0.0.1:8000/salud
+```
+
+Deberia responder: `{"estado":"ok"}`
+
+5. Abrir el juego y elegir "Jugar contra IA".
+
+Si aparece `address already in use`, cerrar backend previo y volver a iniciar:
+
+```bash
+pkill -f "uvicorn backend.main"
+./.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
 
 ## Alcance de esta primera version de IA
 
