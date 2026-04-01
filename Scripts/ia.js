@@ -113,6 +113,19 @@ async function ejecutarAccionIA() {
             nivel_pendiente: estadoTruco.nivelPendiente
         });
 
+        const tipoEnvidoDesdeTruco = {
+            'cantar-envido': 'envido',
+            'cantar-realenvido': 'realenvido',
+            'cantar-faltaenvido': 'faltaenvido'
+        }[decision.accion];
+
+        if (tipoEnvidoDesdeTruco) {
+            const interrumpio = interrumpirTrucoConEnvido(tipoEnvidoDesdeTruco);
+            if (interrumpio) {
+                return;
+            }
+        }
+
         if (decision.accion === 'subir') {
             subirTrucoDesdeRespuesta();
             return;

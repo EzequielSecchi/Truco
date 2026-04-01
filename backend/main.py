@@ -106,8 +106,7 @@ def decidir(req: DecisionRequest) -> DecisionResponse:
         return DecisionResponse(accion=accion, acepta=acepta, canto_subida=canto_subida)
 
     if req.fase == 'responder-truco':
-        cartas_fuerza = req.cartas_rival_iniciales or req.cartas_rival
-        accion, acepta = decidir_truco(cartas_fuerza, req.nivel_pendiente or 2, req.dificultad)
+        accion, acepta = decidir_respuesta_truco(req)
         return DecisionResponse(accion=accion, acepta=acepta)
 
     if req.fase == 'decidir-canto':
@@ -304,6 +303,31 @@ def decidir_truco(cartas_rival: list[int], nivel_pendiente: int, dificultad: str
         return 'aceptar', fuerza >= perfil['retruco_aceptar']
 
     return 'aceptar', fuerza >= perfil['vale_cuatro_aceptar']
+
+
+def decidir_respuesta_truco(req: DecisionRequest) -> tuple[str, bool | None]:
+    perfil = perfil_dificultad(req.dificultad)
+
+    baza0 = req.bazas.get('0') or {}
+    nadie_jugo_primera = baza0.get('jugador') is None and baza0.get('rival') is None
+    puede_cantar_envido = (
+        req.estado_envido.habilitado
+        and not req.estado_envido.fue_cantado
+        and nadie_jugo_primera
+    )
+
+    if puede_cantar_envido:
+        valor = calcular_envido(req.cartas_rival)
+        if valor >= perfil['cantar_falta']:
+            return 'cantar-faltaenvido', None
+        if valor >= perfil['cantar_real']:
+            return 'cantar-realenvido', None
+        if valor >= perfil['cantar_envido'] or random.random() < perfil['bluff_envido']:
+            return 'cantar-envido', None
+
+    cartas_fuerza = req.cartas_rival_iniciales or req.cartas_rival
+    accion, acepta = decidir_truco(cartas_fuerza, req.nivel_pendiente or 2, req.dificultad)
+    return accion, acepta
 
 
 def decidir_envido(cartas_rival: list[int], canto: str, puntos: dict[str, int], puntos_objetivo: int, dificultad: str) -> bool:

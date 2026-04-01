@@ -160,6 +160,9 @@ function resolverTruco(acepta) {
         estadoTruco.nivelAceptado = nivelPendiente;
         estadoTruco.pendiente = false;
         estadoTruco.nivelPendiente = null;
+
+        // Con truco aceptado, ya no se puede cantar envido en esta mano.
+        estadoEnvido.habilitado = false;
         
         // El responder puede cantar el siguiente nivel ahora
         estadoTruco.puedeEscalarAhora = estadoTruco.responder;

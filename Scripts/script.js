@@ -315,6 +315,11 @@ function actualizarBotones() {
         estadoEnvido.habilitado = false;
     }
 
+    // Si el Truco ya fue aceptado (truco/retruco/vale cuatro), no se puede cantar envido.
+    if (estadoTruco.nivelAceptado > 1) {
+        estadoEnvido.habilitado = false;
+    }
+
     const puedeCantarEnvido = !bloqueadoGeneral && estadoEnvido.habilitado;
     const puedeCantarTrucoJugador = !bloqueadoGeneral && obtenerSiguienteNivelTruco('jugador') !== null;
     const puedeCantarTrucoRival = !bloqueadoGeneral && obtenerSiguienteNivelTruco('rival') !== null;
@@ -604,6 +609,15 @@ function iniciarNuevaMano() {
     resetearEstadoDeMano();
 }
 
+function obtenerPosicionCartaEnCasilla(rect) {
+    const compensacionX = (ANCHO_CARTA * (1 - ESCALA_CARTA)) / 2;
+    const compensacionY = (ALTO_CARTA * (1 - ESCALA_CARTA)) / 2;
+    return {
+        left: rect.left - compensacionX,
+        top: rect.top - compensacionY
+    };
+}
+
 function aplicarCapasSegunPrioridad(cartaRecienJugada, indiceCasilla) {
     const cartasEnCasilla = Array.from(document.querySelectorAll(`.carta[data-casilla-index="${indiceCasilla}"]`));
     const casilla = document.querySelector(`.casilla[data-index="${indiceCasilla}"]`);
@@ -611,8 +625,9 @@ function aplicarCapasSegunPrioridad(cartaRecienJugada, indiceCasilla) {
 
     if (cartasEnCasilla.length === 1) {
         if (rect) {
-            cartaRecienJugada.style.left = rect.left + 'px';
-            cartaRecienJugada.style.top = rect.top + 'px';
+            const posicion = obtenerPosicionCartaEnCasilla(rect);
+            cartaRecienJugada.style.left = posicion.left + 'px';
+            cartaRecienJugada.style.top = posicion.top + 'px';
         }
         cartaRecienJugada.style.zIndex = String(contadorCapas);
         contadorCapas += 1;
@@ -631,20 +646,22 @@ function aplicarCapasSegunPrioridad(cartaRecienJugada, indiceCasilla) {
             cartaRecienJugada.style.zIndex = String(base + 1);
 
             if (rect) {
-                otraCarta.style.left = rect.left + 'px';
-                otraCarta.style.top = rect.top + 'px';
-                cartaRecienJugada.style.left = (rect.left + DESPLAZAMIENTO_CARTA_GANADORA_X) + 'px';
-                cartaRecienJugada.style.top = (rect.top + DESPLAZAMIENTO_CARTA_GANADORA_Y) + 'px';
+                const posicion = obtenerPosicionCartaEnCasilla(rect);
+                otraCarta.style.left = posicion.left + 'px';
+                otraCarta.style.top = posicion.top + 'px';
+                cartaRecienJugada.style.left = (posicion.left + DESPLAZAMIENTO_CARTA_GANADORA_X) + 'px';
+                cartaRecienJugada.style.top = (posicion.top + DESPLAZAMIENTO_CARTA_GANADORA_Y) + 'px';
             }
         } else {
             cartaRecienJugada.style.zIndex = String(base);
             otraCarta.style.zIndex = String(base + 1);
 
             if (rect) {
-                cartaRecienJugada.style.left = rect.left + 'px';
-                cartaRecienJugada.style.top = rect.top + 'px';
-                otraCarta.style.left = (rect.left + DESPLAZAMIENTO_CARTA_GANADORA_X) + 'px';
-                otraCarta.style.top = (rect.top + DESPLAZAMIENTO_CARTA_GANADORA_Y) + 'px';
+                const posicion = obtenerPosicionCartaEnCasilla(rect);
+                cartaRecienJugada.style.left = posicion.left + 'px';
+                cartaRecienJugada.style.top = posicion.top + 'px';
+                otraCarta.style.left = (posicion.left + DESPLAZAMIENTO_CARTA_GANADORA_X) + 'px';
+                otraCarta.style.top = (posicion.top + DESPLAZAMIENTO_CARTA_GANADORA_Y) + 'px';
             }
         }
     }
@@ -677,8 +694,9 @@ function encastrarCartaEnCasilla(carta, casilla) {
     const lado = carta.dataset.side;
     const codigoCarta = Number(carta.dataset.cardCode);
 
-    carta.style.left = rect.left + 'px';
-    carta.style.top = rect.top + 'px';
+    const posicion = obtenerPosicionCartaEnCasilla(rect);
+    carta.style.left = posicion.left + 'px';
+    carta.style.top = posicion.top + 'px';
     carta.style.transform = `scale(${ESCALA_CARTA})`;
     carta.dataset.casillaIndex = String(indiceCasilla);
     aplicarCapasSegunPrioridad(carta, indiceCasilla);
